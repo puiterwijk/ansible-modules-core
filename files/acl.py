@@ -36,6 +36,15 @@ options:
     description:
       - defines whether the ACL should be present or not.  The C(query) state gets the current acl without changing it, for use in 'register' operations.
 
+  recurse:
+    required: false
+    default: "no"
+    choices: [ "yes", "no" ]
+    version_added: ""
+    description:
+      - recursively set the specified ACL
+
+
   follow:
     required: false
     default: yes
@@ -167,9 +176,11 @@ def get_acls(module,path,follow):
 
     return _run_acl(module,cmd)
 
-def set_acl(module,path,entry,follow,default):
+def set_acl(module,path,entry,recurse,follow,default):
 
     cmd = [ module.get_bin_path('setfacl', True) ]
+    if recurse:
+        cmd.append('-R')
     if not follow:
         cmd.append('-h')
     if default:
@@ -212,6 +223,7 @@ def main():
             etype = dict(required=False, choices=['other', 'user', 'group', 'mask'], type='str'),
             permissions = dict(required=False, type='str'),
             state = dict(required=False, default='query', choices=[ 'query', 'present', 'absent' ], type='str'),
+            recurse  = dict(required=False, default=False, type='bool'),
             follow = dict(required=False, type='bool', default=True),
             default= dict(required=False, type='bool', default=False),
         ),
@@ -224,6 +236,7 @@ def main():
     etype = module.params.get('etype')
     permissions = module.params.get('permissions')
     state = module.params.get('state')
+    recurse = module.params.get('recurse')
     follow = module.params.get('follow')
     default = module.params.get('default')
 
@@ -272,7 +285,7 @@ def main():
             changed=True
 
         if changed and not module.check_mode:
-            set_acl(module,path,':'.join([etype, str(entity), permissions]),follow,default)
+            set_acl(module,path,':'.join([etype, str(entity), permissions]),recurse,follow,default)
         msg="%s is present" % ':'.join([etype, str(entity), permissions])
 
     elif state == 'absent':
